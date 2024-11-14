@@ -1,9 +1,16 @@
 
-example (p q r : Prop) : ((p ∨ q) → r) ↔ ((p → r) ∧ (q → r)) :=
-Iff.intro
-    (fun l : (p ∨ q) → r => sorry)
-    (fun l : ((p → r) ∧ (q → r)) =>
-        have a := l.left
-        have b := l.right
-        (fun l : (p ∨ q) => Or.elim l a b)
-    )
+theorem q1 (p q r : Prop) : ((p ∨ q) → r) ↔ ((p → r) ∧ (q → r)) := by
+    apply Iff.intro
+    . intro hd
+      constructor
+      <;> intro h
+      <;> apply hd
+      . apply Or.inl
+        exact h
+      . apply Or.inr
+        exact h
+    . intro hc
+      intro pq
+      apply Or.elim pq
+      . exact hc.left
+      . exact hc.right
