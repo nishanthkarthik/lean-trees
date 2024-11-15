@@ -32,19 +32,78 @@ example : (p ∧ q) ∧ r ↔ p ∧ (q ∧ r) := by
 example : (p ∨ q) ∨ r ↔ p ∨ (q ∨ r) := by
   apply Iff.intro
   . intro t
-    sorry
+    cases t with
+    | inl hpq =>
+      cases hpq with
+      | inl hl => apply Or.intro_left; exact hl
+      | inr hr => apply Or.intro_right; apply Or.intro_left; exact hr
+    | inr hr => apply Or.intro_right; apply Or.intro_right; exact hr
   . intro h
-    sorry
+    cases h with
+    | inl hp => apply Or.intro_left; apply Or.intro_left; exact hp
+    | inr qr =>
+      cases qr with
+      | inl hq => apply Or.intro_left; apply Or.intro_right; exact hq
+      | inr hr => apply Or.intro_right; exact hr
 
 -- distributivity
-example : p ∧ (q ∨ r) ↔ (p ∧ q) ∨ (p ∧ r) := sorry
+example : p ∧ (q ∨ r) ↔ (p ∧ q) ∨ (p ∧ r) := by
+  constructor
+  . intro pqr
+    cases pqr.right with
+    | inl q =>
+      apply Or.intro_left
+      constructor
+      . exact pqr.left
+      . exact q
+    | inr r =>
+      apply Or.intro_right
+      constructor
+      . exact pqr.left
+      . exact r
+  . intro pqpr
+    cases pqpr with
+    | inl pq =>
+      constructor
+      . exact pq.left
+      . apply Or.intro_left
+        exact pq.right
+    | inr pr =>
+      constructor
+      . exact pr.left
+      . apply Or.intro_right
+        exact pr.right
 
 example : p ∨ (q ∧ r) ↔ (p ∨ q) ∧ (p ∨ r) := sorry
 
 -- other properties
-example : (p → (q → r)) ↔ (p ∧ q → r) := sorry
+example : (p → (q → r)) ↔ (p ∧ q → r) := by
+  constructor
+  <;> intro h
+  <;> intro l
+  . apply h
+    . exact l.left
+    . exact l.right
+  . intro hq
+    apply h
+    constructor
+    . exact l
+    . exact hq
 
-example : ((p ∨ q) → r) ↔ (p → r) ∧ (q → r) := sorry
+example : ((p ∨ q) → r) ↔ (p → r) ∧ (q → r) := by
+  constructor
+  . intro l
+    constructor
+    <;> intro h
+    <;> apply l
+    . apply Or.inl
+      exact h
+    . apply Or.inr
+      exact h
+  . intro ⟨ pr, qr ⟩ pq
+    cases pq with
+    | inl hp => exact (pr hp)
+    | inr hq => exact (qr hq)
 
 example : ¬(p ∨ q) ↔ ¬p ∧ ¬q := by
   apply Iff.intro
