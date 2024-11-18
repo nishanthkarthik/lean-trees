@@ -46,6 +46,15 @@ example : (p ∨ q) ∨ r ↔ p ∨ (q ∨ r) := by
       | inl hq => apply Or.intro_left; apply Or.intro_right; exact hq
       | inr hr => apply Or.intro_right; exact hr
 
+example : ¬(p ↔ ¬p) := by
+  intro h
+  rcases h with ⟨h1, h2⟩
+  have np : ¬p := by
+    intro hp
+    exact h1 hp hp
+  . apply h1
+    <;> exact (h2 np)
+
 -- distributivity
 example : p ∧ (q ∨ r) ↔ (p ∧ q) ∨ (p ∧ r) := by
   constructor
