@@ -92,4 +92,7 @@ theorem rev_rev (as : TList α) : rev (rev as) = as := by
   | tcons x xs ih =>
     calc rev (rev (tcons x xs))
       _ = rev (append (rev xs) (tcons x tnil)) := by rfl
-      _ = _ := by sorry
+      _ = append (rev (tcons x tnil)) (rev (rev xs)) := by rw [rev_app]
+      _ = append (rev (tcons x tnil)) xs := by rw [ih]
+      _ = append (tcons x tnil) xs := by rfl
+      _ = tcons x xs := by rfl
