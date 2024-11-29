@@ -1,0 +1,33 @@
+field left: Ref
+field right: Ref
+field val: Int
+
+predicate tree(t: Ref) {
+    acc(t.left) && acc(t.right) && acc(t.val)
+    && (t.left != null ==> tree(t.left))
+    && (t.right != null ==> tree(t.right))
+    && (t.val % 2 == 0) // All values are even
+}
+
+define max(a, b) a >= b ? a : b
+
+// 8.5 seconds after warmup
+method max_val(t: Ref)
+    returns (m: Int)
+    requires t != null ==> tree(t)
+    ensures t != null ==> tree(t)
+    ensures t != null ==> (unfolding tree(t) in t.left) == old(unfolding tree(t) in t.left)
+    ensures t != null ==> (unfolding tree(t) in t.right) == old(unfolding tree(t) in t.right)
+    ensures t != null ==> (unfolding tree(t) in t.val) == old(unfolding tree(t) in t.val)
+    ensures m % 2 == 0
+{
+    if (t != null) {
+        unfold tree(t)
+        var a: Int := max_val(t.left)
+        var b: Int := max_val(t.right)
+        m := max(t.val, max(a, b))
+        fold tree(t)
+    } else {
+        m := 0
+    }
+}
