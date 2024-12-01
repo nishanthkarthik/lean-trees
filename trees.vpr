@@ -11,7 +11,7 @@ predicate tree(t: Ref) {
 
 define max(a, b) a >= b ? a : b
 
-// 8.5 seconds after warmup
+// 4 seconds after warmup
 method max_val(t: Ref)
     returns (m: Int)
     requires t != null ==> tree(t)

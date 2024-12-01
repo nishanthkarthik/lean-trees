@@ -1,0 +1,31 @@
+field left: Ref
+field right: Ref
+field lo: Int
+field hi: Int
+field m: Int
+
+// a segtree that supports fast max-in-interval queries
+predicate tree(t: Ref, s: Seq[Int]) {
+    acc(t.left) && acc(t.right) && acc(t.lo) && acc(t.hi) && acc(t.m)
+    && (t.left != null <==> t.right != null)
+    && (t.left != null ==> tree(t.left, s))
+    && (t.right != null ==> tree(t.right, s))
+    // indices
+    && t.lo >= 0 && t.hi >= 0 && t.hi >= t.lo && t.hi < |s|
+    // maximum
+    && (forall i : Int :: t.lo <= i <= t.hi ==> t.m >= s[i])
+    && (exists i : Int :: t.lo <= i <= t.hi ==> t.m == s[i])
+    // child indices are closed
+    && true
+}
+
+define max(a, b) a >= b ? a : b
+
+method query(t: Ref, p: Perm, from: Int, to: Int, s: Seq[Int])
+    requires p > none && p < write
+    requires t != null
+    requires acc(tree(t, s), p)
+    ensures acc(tree(t, s), p)
+{
+
+}
