@@ -1,0 +1,29 @@
+function swap(arr: Seq[Int], fr: Int, to: Int): Seq[Int]
+    requires 0 <= fr < |arr|
+    requires 0 <= to < |arr|
+    requires fr != to
+    ensures |arr| == |result|
+    ensures forall i: Int :: 0 <= i < |arr| && i != fr && i != to ==> result[i] == arr[i]
+    ensures result[fr] == arr[to] && result[to] == arr[fr]
+{
+    arr[fr := arr[to]][to := arr[fr]]
+}
+
+method heapify(arr: Seq[Int], s: Int)
+    returns (ret_arr: Seq[Int])
+    requires s > 0 && s < |arr|
+    decreases |arr| - s
+{
+    var left: Int := 2 * s
+    var right: Int := 2 * s + 1
+    var sm: Int := s
+    sm := left < |arr| && arr[left] < arr[sm] ? left : sm
+    sm := right < |arr| && arr[right] < arr[sm] ? right : sm
+
+    if (s != sm) {
+        ret_arr := swap(arr, s, sm)
+        ret_arr := heapify(ret_arr, sm)
+    } else {
+        ret_arr := arr
+    }
+}
