@@ -1,0 +1,135 @@
+field pto: Ref
+field curr_prio: Int
+field def_prio: Int
+field prios: Multiset[Int]
+
+define compute_prio(n) max(|n.prios| > 0 ? max_multiset(n.prios) : n.def_prio, n.def_prio)
+
+predicate pip(procs: Set[Ref], locks: Set[Ref]) {
+    procs intersection locks == Set()
+
+    && (forall p: Ref :: {p in procs} p in procs ==>
+        acc(p.pto) && acc(p.prios) && acc(p.curr_prio) && acc(p.def_prio)
+            && (p.pto != null ==> p.pto in locks)
+            && p.def_prio >= 0
+            && (forall i: Int :: {i in p.prios} (i in p.prios) > 0 ==> i >= 0)
+            && (p.curr_prio == compute_prio(p)))
+
+    && (forall l: Ref :: {l in locks} l in locks ==>
+        acc(l.pto) && acc(l.prios) && acc(l.curr_prio) && acc(l.def_prio)
+            && (l.pto != null ==> l.pto in procs)
+            && l.def_prio >= 0
+            && (forall i: Int :: {i in l.prios} (i in l.prios) > 0 ==> i >= 0)
+            && (l.curr_prio == compute_prio(l)))
+}
+
+define max(a, b) a > b ? a : b
+
+function max_multiset(m: Multiset[Int]): Int
+    requires |m| > 0
+    ensures (result in m) >= 1
+    ensures forall i: Int :: {i in m} (i in m) > 0 ==> result >= i
+
+method acquire(p: Ref, r: Ref, procs: Set[Ref], locks: Set[Ref])
+    requires pip(procs, locks)
+    requires p in procs && r in locks
+    ensures pip(procs, locks)
+{
+    unfold pip(procs, locks)
+    if (r.pto == p) {
+        fold pip(procs, locks)
+    } elseif (r.pto == null) {
+        r.pto := p;
+        var to: Int := r.curr_prio
+        fold pip(procs, locks)
+        update(p, -1, to, procs, locks)
+    } else {
+        p.pto := r;
+        var to: Int := p.curr_prio
+        fold pip(procs, locks)
+        update(r, -1, to, procs, locks)
+    }
+}
+
+define present(ms, e) (e in ms) > 0
+
+method update(n: Ref, from: Int, to: Int, procs: Set[Ref], locks: Set[Ref])
+    requires to >= from
+    requires pip(procs, locks)
+    requires (n in procs) != (n in locks)
+    ensures pip(procs, locks)
+    ensures forall e: Ref :: {e in procs} {e in locks}
+        e in procs || e in locks ==> (unfolding pip(procs, locks) in e.curr_prio) >= old(unfolding pip(procs, locks) in e.curr_prio)
+{
+    unfold pip(procs, locks)
+
+    var m1: Int := compute_prio(n)
+    label lm1
+
+    // NOTE
+    if (from >= 0 && (from in n.prios) > 0) {
+        n.prios := n.prios setminus Multiset(from)
+    }
+
+    if (m1 == from) {
+        if ((from in old[lm1](n.prios)) > 1) {
+            // from is still present so max has not changed
+            assert (from in n.prios) > 0
+            assert m1 == compute_prio(n)
+        } else {
+            // from is gone
+            assert (from in n.prios) == 0
+            assert compute_prio(n) <= m1
+        }
+    } else {
+        // m1 is either max of ms or def_prio
+        // removing from should make no difference
+        if (|n.prios| > 0 && m1 == old[lm1](max_multiset(n.prios))) {
+            assert present(n.prios, m1)
+            assert m1 == max_multiset(n.prios)
+        } else {
+            assert m1 == n.def_prio
+        }
+    }
+
+    var m2: Int := compute_prio(n)
+    label lm2
+
+    assert m2 <= m1
+
+    // NOTE
+    if (to >= 0) {
+        n.prios := n.prios union Multiset(to)
+    }
+
+    var m3: Int := compute_prio(n)
+    assert m3 == n.def_prio || present(n.prios, m3)
+    assert m2 == old[lm2](n.def_prio) || old[lm2](present(n.prios, m2))
+
+    if (m2 == n.def_prio && m3 == n.def_prio) {
+        assert m3 == m2
+    } elseif (m2 == n.def_prio && present(n.prios, m3)) {
+        assert m3 > m2
+    } else {
+        assert present(n.prios, m2)
+        assert m3 >= m2
+    }
+
+    assert m3 >= m1
+
+    var from_prio: Int := n.curr_prio
+
+    // NOTE
+    n.curr_prio := compute_prio(n)
+    var to_prio: Int := n.curr_prio
+
+    var next: Ref := n.pto
+
+    // NOTE
+    if (from_prio != to_prio && next != null) {
+        fold pip(procs, locks)
+        update(next, from_prio, to_prio, procs, locks)
+    } else {
+        fold pip(procs, locks)
+    }
+}
