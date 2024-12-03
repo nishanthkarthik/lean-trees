@@ -26,10 +26,9 @@ def heapify (a : Array Nat) (s : Nat) (pf_s_lower : s > 0) (pf_s_upper : s < a.s
   have pf_sm1_size : sm_1 < a.size := by
     unfold sm_1
     split <;> rename_i h1
-    . split <;> rename_i h2
-      . exact h1
-      . exact pf_s_upper
-    . exact pf_s_upper
+    split <;> rename_i h2
+    all_goals (try exact pf_s_upper)
+    exact h1
 
   -- move towards termination
   have pf_sm1_dec : sm_1 >= s := by
@@ -39,7 +38,7 @@ def heapify (a : Array Nat) (s : Nat) (pf_s_lower : s > 0) (pf_s_upper : s < a.s
     split <;> rename_i h2
     all_goals (try exact Nat.le_refl s)
     unfold l
-    refine Nat.le_mul_of_pos_left s ?hole
+    refine Nat.le_mul_of_pos_left s ?_
     exact Nat.zero_lt_two
 
   -- second assignment
@@ -64,7 +63,7 @@ def heapify (a : Array Nat) (s : Nat) (pf_s_lower : s > 0) (pf_s_upper : s < a.s
     all_goals (try exact pf_sm1_dec)
     unfold r
     simp [*]
-    refine Nat.le_add_right_of_le ?isTrue.isTrue.h1
+    refine Nat.le_add_right_of_le ?_
     have h : 2 * s = s + s := by exact Nat.two_mul s
     rw [h]
     exact Nat.le_add_right s s
