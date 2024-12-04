@@ -10,6 +10,7 @@ theorem nat_sub_elim (a b k : Nat) {_ : k > a} {q : k > b}
 -- Report ideas
 -- No abstraction leakage (the foundation is well hidden)
 -- simp is like trigger based instantiation
+-- Viper makes it easier to hide a proof for False. In Lean, it's explicit
 
 -- Min heap
 structure Heap where
