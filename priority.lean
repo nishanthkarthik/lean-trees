@@ -5,7 +5,14 @@ inductive Kind where
   | lock : Kind
 
 open Kind
-axiom distinct_kind : lock ≠ proc
+
+theorem distinct_kind : lock ≠ proc := by
+  intro h
+  nomatch h
+
+theorem other_kind (k : Kind) : (k = lock ↔ k ≠ proc) ∧ (k = proc ↔ k ≠ lock) := by
+  constructor <;> constructor <;> intro h
+  <;> induction k <;> simp [*] at *
 
 structure St (world_size : Nat) where
   pto: Option (Fin world_size)
@@ -82,7 +89,15 @@ def World.acquire {wsize : Nat} (w : World wsize)
       : store[i].kind ≠ store[pto].kind := by
       by_cases h1 : i = r_i
       . simp [*] at *
-        rw [h]
+        have h_ : pto = p_i := by rw [h]
+        rw [h_]
+        have h_ : store[p_i].kind = proc := by
+          calc store[p_i].kind
+            _ = w.store[p_i].kind := by exact congrArg St.kind (pf_store_eq_1 p_i pf_p_ne_r)
+            _ = proc := by exact p_k
+        intro m
+        rw [h_] at m
+
         sorry
       . rw [pf_store_eq_1 i h1]
         sorry
