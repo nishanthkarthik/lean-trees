@@ -74,11 +74,16 @@ def World.acquire {wsize : Nat} (w : World wsize)
       unfold store
       rw [Array.size_set, w.pf_sz]
 
-    have pf_store_ri : store[r_i] = res := by sorry
+    have pf_store_ri : store[r_i] = res := by
+      unfold store
+      simp [Array.get_set_eq]
+
     have pf_store_ri_pto : store[r_i].pto = some p_i := by simp [pf_store_ri]
 
     have _ := w.pf_sz
-    have pf_store_eq_1 : (i : Fin wsize) -> i ≠ r_i → store[i] = w.store[i] := by sorry
+    have pf_store_eq_1 : (i : Fin wsize) -> i ≠ r_i → store[i] = w.store[i] := by
+      intro i h
+      sorry
 
     have pf_idx : (i : Fin wsize) → (h : store.size = wsize) → i < store.size := by
       intro i h
@@ -91,14 +96,14 @@ def World.acquire {wsize : Nat} (w : World wsize)
       . simp [*] at *
         have h_ : pto = p_i := by rw [h]
         rw [h_]
-        have h_ : store[p_i].kind = proc := by
+        have h_ : store[p_i.val].kind = proc := by
           calc store[p_i].kind
             _ = w.store[p_i].kind := by exact congrArg St.kind (pf_store_eq_1 p_i pf_p_ne_r)
             _ = proc := by exact p_k
         intro m
         rw [h_] at m
-
-        sorry
+        apply distinct_kind
+        exact m
       . rw [pf_store_eq_1 i h1]
         sorry
 
