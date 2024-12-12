@@ -1,5 +1,3 @@
-import Batteries.Data.Array.Basic
-
 set_option pp.fieldNotation true
 
 inductive Kind where
@@ -16,16 +14,86 @@ theorem other_kind (k : Kind) : (k = lock ↔ k ≠ proc) ∧ (k = proc ↔ k �
   constructor <;> constructor <;> intro h
   <;> induction k <;> simp [*] at *
 
+def List.nemax (a : List Nat) (v : Nat) : Nat := a.foldr max v
+
+theorem nat_max_cmp (a b c : Nat) (h : a <= b) : max a c <= max b c := by
+  simp [Nat.max_def]
+  by_cases h1 : a <= b
+  <;> by_cases h2 : b <= c
+  <;> by_cases h3 : a <= c
+  all_goals (try simp [*])
+  . have _ : a <= c := by exact Nat.le_trans h h2
+    contradiction
+  . apply Nat.le_of_lt
+    exact Nat.gt_of_not_le h2
+  . contradiction
+  . exact False.elim (h1 h)
+
+theorem nat_max_lim (a b x : Nat) (h1 : a <= x) (h2 : b <= x) : max a b <= x := Nat.max_le_of_le_of_le h1 h2
+
+theorem nat_max_elim {a b x : Nat} (h1 : x <= a) (h2 : x <= b) : x <= max a b := by
+  rw [Nat.max_def]
+  split
+  exact h2
+  exact h1
+
+theorem max_comm_aux (a b c : Nat) : max (max a b) c = max a (max b c) := Nat.max_assoc a b c
+
+theorem max_smaller {a b ah f : Nat} (h1 : a <= max f b) (h2 : max f b < ah) : a <= max ah (max f b) := by
+  have fact : max ah (max f b) = ah := by
+    rw [Nat.max_def]
+    simp [Nat.not_le_of_lt h2]
+  rw [fact]
+  apply Nat.le_of_lt
+  calc a
+    _ <= max f b := h1
+    _ < ah := h2
+
+theorem list_erase_max (a : List Nat) (d p f : Nat) (h0 : p <= f)
+  : a.nemax d <= (f :: a.erase p).nemax d := by
+  by_cases h1 : p ∈ a
+  . unfold List.nemax
+    have a_ne : a ≠ .nil := by intro e; rw [e, List.mem_nil_iff] at h1; exact h1
+    induction a with
+    | nil => contradiction
+    | cons ah as ih =>
+      unfold List.foldr
+      by_cases h2 : p ∈ as
+      <;> by_cases h3 : as = []
+      <;> by_cases h4 : ah = p
+      all_goals (try simp [*, nat_max_cmp, Nat.le_max_right] at *)
+      . apply nat_max_lim
+        . rw [Nat.max_comm, max_comm_aux]
+          simp [Nat.le_max_left]
+        . rw [Nat.max_comm, max_comm_aux]
+          have hh : max (List.foldr max d (as.erase p)) f = max f (List.foldr max d (as.erase p)) := by rw [Nat.max_comm]
+          rw [hh]
+          by_cases h6 : ah <= (max f (List.foldr max d (as.erase p)))
+          . have hh : max ah (max f (List.foldr max d (as.erase p))) = (max f (List.foldr max d (as.erase p))) := by
+              exact Nat.max_eq_right h6
+            rw [hh]
+            exact ih
+          . rw [Nat.not_le] at h6
+            exact max_smaller ih h6
+      . simp [List.erase_of_not_mem h2, Nat.le_max_right]
+  . simp [List.nemax, h1, List.erase, List.mem_cons_of_mem]
+    simp [List.erase_of_not_mem h1, Nat.le_max_right]
+
+theorem list_add_max (a : List Nat) (d n : Nat)
+  : a.nemax d <= (n :: a).nemax d := by
+  unfold List.nemax
+  induction a with
+  | nil => simp [Nat.le_max_right]
+  | cons ah as ih => simp [List.foldr, Nat.le_max_right]
+
 structure St (world_size : Nat) where
   pto: Option (Fin world_size)
   def_prio: Nat
-  prios: Array Nat
+  prios: List Nat
   kind: Kind
 
 def St.curr_prio (s : St n) : Nat :=
-  match s.prios.max? with
-  | none => s.def_prio
-  | some m => max m s.def_prio
+  s.prios.nemax s.def_prio
 
 structure World (size : Nat) where
   store : Array (St size)
@@ -56,28 +124,23 @@ partial def World.update_prio {wsize : Nat} (w : World wsize)
     | some p => if nst.prios.contains p then nst.prios.erase p else nst.prios
 
   -- insert {to} into prios
-  let prios2 : Array _ := prios1.push to_pr
+  let prios2 : List _ := to_pr :: prios1
 
   let nst1 := {nst with prios := prios2}
   let new_to_pr := nst1.curr_prio
 
-  -- prios2 should not be empty
-  have prios2_nempty : prios2.max? ≠ none := by sorry
-
   -- monotonicity
   have new_pr_inc : new_fr_pr <= new_to_pr := by
-    unfold new_fr_pr new_to_pr St.curr_prio
-    split <;> rename_i h1
-    split <;> rename_i h2
-    try (simp [*] at *)
-    . exact Nat.le_max_right _ nst.def_prio
-    split <;> rename_i h3
-    . have g : nst1.def_prio = nst.def_prio := by rfl
-      rw [g]
-      simp
-      -- h3 says prios2 is empty. this is false
-      sorry
-    . sorry
+    unfold new_fr_pr new_to_pr St.curr_prio nst1 prios2 prios1
+    simp
+    split <;> rename_i fr_pr
+    . exact Nat.le_max_right to_pr (List.foldr max nst.def_prio nst.prios)
+    . rename_i p
+      by_cases h : p ∈ nst.prios
+      <;> simp [*]
+      . simp [*] at fr_pr
+        exact list_erase_max nst.prios nst.def_prio p to_pr fr_pr
+      . simp [list_add_max]
 
   let store := w.store.set (Fin.mk n (w.pf_idx n w.pf_sz)) nst1
 
@@ -202,7 +265,6 @@ def World.acquire {wsize : Nat} (w : World wsize)
 
     have pf_inc_pr : (if let some f := from_pr then to_pr >= f else true) := by rfl
     World.update_prio (World.mk store pf_sz th_pf_idx pf_ptr) p_i from_pr to_pr pf_inc_pr
-    -- World.mk store pf_sz th_pf_idx pf_ptr
   | some pto =>
     if pto == p_i
       -- resource already points to this process
@@ -270,4 +332,3 @@ def World.acquire {wsize : Nat} (w : World wsize)
         let to_pr := store[r_i].curr_prio
         have pf_inc_pr : (if let some f := from_pr then to_pr >= f else true) := by rfl
         World.update_prio (World.mk store pf_sz th_pf_idx pf_ptr) r_i from_pr to_pr pf_inc_pr
-        -- World.mk store pf_sz th_pf_idx pf_ptr

@@ -1,0 +1,9 @@
+function eq(a: Int, b: Int): Bool {
+    a == b
+}
+
+method g(i: Int) {
+    var another_j: Int
+    assert eq(another_j, i) || !eq(another_j, i)
+    assert exists j: Int :: {eq(j,i)} j == i
+}
