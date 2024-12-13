@@ -171,6 +171,24 @@ partial def World.update_prio {wsize : Nat} (w : World wsize)
       simp
       exact Fin.val_ne_of_ne fun a => h (id (Eq.symm a))
 
+  -- framing: priorities only increase ∀
+  have pf_frame_prio (i : Fin wsize) :
+    store[i].curr_prio >= (w.store[i]'(w.pf_idx i w.pf_sz)).curr_prio := by
+    by_cases h : i = n
+    . rw [h]
+      unfold store
+      simp [w.store.getElem_set_eq]
+      unfold nst1 St.curr_prio nst
+      simp [*] at *
+      exact new_pr_inc -- use previous proof
+    . unfold store
+      let n' := Fin.mk n (w.pf_idx n w.pf_sz)
+      simp [*] at *
+      rw [w.store.getElem_set_ne]
+      have _ : _ := (w.pf_idx i w.pf_sz)
+      exact Nat.le_refl w.store[i].curr_prio
+      exact Ne.symm (Fin.val_ne_of_ne h)
+
   have pf_ptr {pto : Fin wsize} (i : Fin wsize) (h : store[i].pto = some pto)
     : store[i].kind ≠ store[pto].kind := by
     rw [(pf_frame _).left, (pf_frame _).left]
